@@ -1,0 +1,11 @@
+{
+  "name": "umd-monitor",
+  "description": "Real-time Claude Code session monitoring via Firebase RTDB. Stream tool usage, notifications, and session events to the umd mobile app.",
+  "version": "1.0.0",
+  "author": {
+    "name": "wsLabs"
+  },
+  "repository": "https://github.com/kjinwork/umd-monitor-plugin",
+  "license": "MIT",
+  "keywords": ["monitoring", "firebase", "realtime", "umd"]
+}

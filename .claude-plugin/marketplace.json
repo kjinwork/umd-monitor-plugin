@@ -1,0 +1,11 @@
+{
+  "plugins": [
+    {
+      "name": "umd-monitor",
+      "source": {
+        "source": "local",
+        "path": "."
+      }
+    }
+  ]
+}

@@ -21,12 +21,64 @@ SESSION_ID=$(extract session_id)
 [ -z "$TOOL_NAME" ] && TOOL_NAME="unknown"
 [ -z "$SESSION_ID" ] && SESSION_ID="unknown"
 
+# Extract detail from tool_input based on tool type
+DETAIL=""
+case "$TOOL_NAME" in
+  Read)
+    DETAIL=$(extract file_path)
+    # Shorten to filename
+    [ -n "$DETAIL" ] && DETAIL=$(basename "$DETAIL")
+    ;;
+  Write)
+    DETAIL=$(extract file_path)
+    [ -n "$DETAIL" ] && DETAIL=$(basename "$DETAIL")
+    ;;
+  Edit)
+    DETAIL=$(extract file_path)
+    [ -n "$DETAIL" ] && DETAIL=$(basename "$DETAIL")
+    ;;
+  Bash)
+    DETAIL=$(extract command)
+    # Truncate long commands
+    [ ${#DETAIL} -gt 80 ] && DETAIL="${DETAIL:0:77}..."
+    ;;
+  Grep)
+    DETAIL=$(extract pattern)
+    ;;
+  Glob)
+    DETAIL=$(extract pattern)
+    ;;
+  Skill)
+    DETAIL=$(extract skill)
+    ;;
+  Agent)
+    DETAIL=$(extract description)
+    ;;
+  WebSearch|WebFetch)
+    DETAIL=$(extract query)
+    [ -z "$DETAIL" ] && DETAIL=$(extract url)
+    ;;
+esac
+
+# Escape double quotes and backslashes in DETAIL for JSON safety
+DETAIL=$(echo "$DETAIL" | sed 's/\\/\\\\/g; s/"/\\"/g' | head -c 120)
+
 TIMESTAMP=$(date +%s)000
 EVENT_ID=$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null || echo "evt-${TIMESTAMP}-$$")
 
+# Build message
+MESSAGE="Used ${TOOL_NAME}"
+
+# Build JSON payload
+if [ -n "$DETAIL" ]; then
+  PAYLOAD="{\"type\":\"tool_use\",\"toolName\":\"${TOOL_NAME}\",\"message\":\"${MESSAGE}\",\"detail\":\"${DETAIL}\",\"timestamp\":${TIMESTAMP}}"
+else
+  PAYLOAD="{\"type\":\"tool_use\",\"toolName\":\"${TOOL_NAME}\",\"message\":\"${MESSAGE}\",\"timestamp\":${TIMESTAMP}}"
+fi
+
 curl -s -o /dev/null -X PUT \
   "${FIREBASE_URL}/hook_data/${HOOK_SECRET}/sessions/${SESSION_ID}/events/${EVENT_ID}.json" \
-  -d "{\"type\":\"tool_use\",\"toolName\":\"${TOOL_NAME}\",\"message\":\"Used ${TOOL_NAME}\",\"timestamp\":${TIMESTAMP}}" 2>> "$LOG_FILE"
+  -d "$PAYLOAD" 2>> "$LOG_FILE"
 
 curl -s -X PATCH \
   "${FIREBASE_URL}/hook_data/${HOOK_SECRET}/sessions/${SESSION_ID}.json" \

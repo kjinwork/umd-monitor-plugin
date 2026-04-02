@@ -8,7 +8,7 @@
     {
       "name": "umd-monitor",
       "description": "Real-time Claude Code session monitoring for the umd mobile app",
-      "source": ".",
+      "source": "./plugins/umd-monitor",
       "homepage": "https://github.com/kjinwork/umd-monitor-plugin"
     }
   ]

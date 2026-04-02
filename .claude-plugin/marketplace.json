@@ -1,10 +1,15 @@
 {
+  "name": "umd-monitor",
+  "owner": {
+    "name": "kjinwork"
+  },
   "plugins": [
     {
       "name": "umd-monitor",
+      "description": "Real-time Claude Code session monitoring for the umd mobile app",
       "source": {
-        "source": "local",
-        "path": "."
+        "source": "github",
+        "repo": "kjinwork/umd-monitor-plugin"
       }
     }
   ]

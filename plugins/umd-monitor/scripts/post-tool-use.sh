@@ -83,3 +83,29 @@ curl -s -o /dev/null -X PUT \
 curl -s -X PATCH \
   "${FIREBASE_URL}/hook_data/${HOOK_SECRET}/sessions/${SESSION_ID}.json" \
   -d "{\"status\":\"running\",\"lastEventAt\":${TIMESTAMP},\"startTime\":${TIMESTAMP}}" >> /dev/null 2>&1 &
+
+# Sync .md files to Firebase (Write/Edit tools only).
+# Build the JSON body in a temp file and POST via --data-binary @FILE so the
+# file content never goes through the command line (avoids ARG_MAX limits).
+if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ]; then
+  FILE_PATH=$(extract file_path)
+  [ -z "$FILE_PATH" ] && FILE_PATH=$(extract path)
+  if [ -n "$FILE_PATH" ] && echo "$FILE_PATH" | grep -qi '\.md$' && [ -f "$FILE_PATH" ]; then
+    FILE_NAME=$(basename "$FILE_PATH")
+    SIZE_BYTES=$(stat -c%s "$FILE_PATH" 2>/dev/null || stat -f%z "$FILE_PATH" 2>/dev/null || echo 0)
+    ENCODED_PATH=$(echo -n "$FILE_PATH" | base64 | tr '+/' '-_' | tr -d '=')
+    TMP_JSON=$(mktemp 2>/dev/null || echo "/tmp/umd-sync-$$.json")
+    {
+      printf '{"path":"%s","filename":"%s","content":"' "$FILE_PATH" "$FILE_NAME"
+      # Escape \ and " then join lines with literal \n
+      sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/\r//g' "$FILE_PATH" \
+        | awk 'BEGIN{first=1} {if(!first)printf "\\n"; printf "%s", $0; first=0}'
+      printf '","lastModified":%s,"sizeBytes":%s,"sessionId":"%s"}' \
+        "$TIMESTAMP" "$SIZE_BYTES" "$SESSION_ID"
+    } > "$TMP_JSON"
+    curl -s -o /dev/null -X PUT \
+      "${FIREBASE_URL}/hook_data/${HOOK_SECRET}/files/${ENCODED_PATH}.json" \
+      --data-binary @"$TMP_JSON" 2>> "$LOG_FILE"
+    rm -f "$TMP_JSON"
+  fi
+fi
